@@ -319,6 +319,16 @@ By completing the experiments in this repository, learners will understand:
 - IoT protocols and cloud connectivity.
 - Embedded system application development.
 
+
+## License
+
+This project is licensed under the MIT License.
+
+You are free to use, modify, and distribute this project
+subject to the terms and conditions of the MIT License.
+
+See the [LICENSE](LICENSE) file for details.
+
 ## 15. References
 
 - Raspberry Pi Pico W Documentation:
