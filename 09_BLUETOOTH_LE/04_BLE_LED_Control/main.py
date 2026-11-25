@@ -1,35 +1,73 @@
 import bluetooth
 import time
 from machine import Pin
-from micropython import const
-
-_IRQ_WRITE = const(3)
-SERVICE = bluetooth.UUID("12345678-1234-5678-1234-56789abcdef0")
-CHAR = bluetooth.UUID("12345678-1234-5678-1234-56789abcdef1")
 
 ble = bluetooth.BLE()
 ble.active(True)
-((handle,),) = ble.gatts_register_services((
-    (SERVICE, ((CHAR, bluetooth.FLAG_WRITE),)),
-))
 
-led = Pin(15, Pin.OUT)
+led = Pin("LED", Pin.OUT)
+
+SERVICE_UUID = bluetooth.UUID("12345678-1234-5678-1234-56789abcdef0")
+CHAR_UUID = bluetooth.UUID("12345678-1234-5678-1234-56789abcdef1")
+
+CHAR = (
+    CHAR_UUID,
+    bluetooth.FLAG_READ | bluetooth.FLAG_WRITE,
+)
+
+SERVICE = (
+    SERVICE_UUID,
+    (CHAR,),
+)
+
+((char_handle,),) = ble.gatts_register_services((SERVICE,))
+
 
 def irq(event, data):
-    if event == _IRQ_WRITE:
-        conn, value_handle = data
-        if value_handle == handle:
-            command = ble.gatts_read(handle).strip().upper()
-            if command == b'ON':
-                led.on()
-            elif command == b'OFF':
-                led.off()
+    if event == 1:
+        print("Connected")
+
+    elif event == 2:
+        print("Disconnected")
+        advertise()
+
+
+def advertise():
+    name = "Pico_W"
+
+    payload = bytearray()
+    payload += bytes([2, 0x01, 0x06])
+    payload += bytes([len(name) + 1, 0x09])
+    payload += name.encode()
+
+    ble.gap_advertise(100000, payload)
+
 
 ble.irq(irq)
-name = b'PicoW_LED'
-adv = bytearray(b'\x02\x01\x06')
-adv += bytes([len(name) + 1, 0x09]) + name
-ble.gap_advertise(100000, adv_data=adv)
+
+advertise()
+
+print("BLE started")
+print("Device: Pico_W")
 
 while True:
-    time.sleep(1)
+    try:
+        value = ble.gatts_read(char_handle)
+
+        if value == b"1":
+            led.on()
+            print("LED ON")
+
+            # Clear received value
+            ble.gatts_write(char_handle, b"")
+
+        elif value == b"0":
+            led.off()
+            print("LED OFF")
+
+            ble.gatts_write(char_handle, b"")
+
+    except:
+        pass
+
+    time.sleep(0.1)
